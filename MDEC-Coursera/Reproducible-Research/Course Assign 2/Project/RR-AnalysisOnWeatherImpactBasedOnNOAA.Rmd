@@ -1,0 +1,195 @@
+---
+title: "RR-AnalysisOnWeatherBasedOnNOAA"
+author: "Ts. Nurul Haszeli Ahmad"
+date: "9/12/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Impact of Severe Weather Events on Health and Economy in United States
+
+## Introduction
+This report presented the analysis on data collected by U.S. National Oceanic and Atmospheric Administration's (NOAA). The main focus of this report is on storm data set collected between the year 1950 until the end of November 2011. 
+
+## Synopsis
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This analysis involves exploring the **U.S. National Oceanic and Atmospheric Administration's (NOAA)** storm database starting from the year **1950 until the end of November 2011**. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage. The result of the analysis presented in this document can be used as a supporting evidence for various ministries and agencies within the government and municipal who might be
+responsible for preparing for severe weather events and will need to prioritize
+resources for different types of events.
+
+Based on the analysis; it is concluded that the severe weather events in united states highly impacting the health and economy. In terms of health, based on the number of injuries and fatalities, it is shown that tornadoes has the highest impact of all weather events. Whereas, flood causes major impact to economy due to the damages affecting properties and plantation.
+
+**Note:**  
+1. This report was made as an assignment for the [Reproducible Research](https://www.coursera.org/learn/reproducible-research) Coursera course.  
+2. The report is made with [RMarkdown](https://rmarkdown.rstudio.com/) and [Knitr](https://yihui.org/knitr/) through tool [Rstudio](https://rstudio.com/).  
+3. The complete code used to produce this analysis is available at [github](https://github.com/masteramuk/Coursera-DS-RR-CourseProject2.git)
+
+## Data
+The data used in this analysis is obtained from **U.S. National Oceanic and Atmospheric Administration's (NOAA)** storm database.
+* [Storm Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) - Data set from the year 1950 until end of November 2011.
+* [Data Description](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf) - Storm data documentation by National weather services
+
+## Library Used
+The following library is used in the analysis.  
+1. dplyr  
+2. ggplot2
+3. gridExtra
+
+## Data Processing
+The section below describe the data processing processes. It starts with laading the necessary library and access the link where the data exist. It is then followed with decompressing the file and load data into memory or processing
+
+### Data preprocessing
+**1. Loading Library**
+```{r library,  include=TRUE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(grid)
+```
+
+**2. Retrieve the file**
+The initial steps to analyse the data is to download the required data set from the given location as listed above; section **Data**.
+```{r, eval=FALSE, cache=TRUE}
+setwd(getwd())
+getwd
+link <- "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+download.file(url = link, destfile = "dataset")
+```
+**Note**: *The link may change depending on the course provider and update from the data provider*
+
+**3. Data loading**
+Upon the data was loaded into the local drive, it will loaded into the memory using *read.csv* function The *bzfile* function is used if the file downloaded is still in compressed format (bz2 extension). If the data set is already loaded, it will use cache object instead of loading it each time the Rmd file is knitted.
+```{r, warning=FALSE}
+if (!exists("dataset")) {
+    # Extract file if it is not already extracted
+    if (!file.exists("repdata_data_StormData.csv.bz2")) {
+        link <- "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+        download.file(url = link, destfile = "dataset")
+    }
+    
+    if (!file.exists("repdata_data_StormData.csv")) {
+        bunzip2("repdata_data_StormData.csv.bz2", overwrite = F)
+    }
+    
+    # Read data into the variable called dataset
+    dataset <- read.csv("repdata_data_StormData.csv", sep = ",", header=TRUE)
+}
+```
+
+**4. Take a look on the dataset**
+```{r, warning=FALSE}
+# view the first 3 rows of the data
+head(dataset, n=3)
+# view the summary of the data
+summary(dataset)
+# view the data structure. It shall has 37 columns (variables) and 902,297 rows (records).
+dim(dataset)
+# view the structure/characteristics of each column
+str(dataset)
+```
+
+### Data analysis
+#### Pre-analysis on the data based on the requirements
+The data set contains 902297 events and 37 variables.
+To find the answers we seek; that are the health and economy impact of the severe weather event, the parameters (or variables) that we are interested are:  
+**1. EVTYPE**  
+- Event type described the event happen. Below are some total events in the data set and some example of the event
+```{r, warning=FALSE}
+# total unique event
+length(unique(dataset$EVTYPE))
+# some of the events
+head(unique(dataset$EVTYPE),n=5)
+```
+**2. Health data**  
+- Counter for the health impact is in the column **FATALITIES** and **INJURIES**   
+**3. Monetary impact**  
+- The monetary impact on crop and property is measured from column **PROPDMG** and **CROPDMG**  
+**4. Other data**  
+- Each orresponding exponents; **PROPDMGEXP** and **CROPDMGEXP**
+
+#### Processing the data
+After we have list all the above parameters/variables that are required to perform analysis in order to find the impact on health and economy of the United States, we separate the data into two sub sets; health and economy data set.  
+**1. Health data**  
+```{r, warning=FALSE, message=FALSE}
+# getting fatalities data
+healthDataset_fatal <- dataset %>% select(EVTYPE, FATALITIES) %>% group_by(EVTYPE) %>% summarise(total.fatalities = sum(FATALITIES)) %>% arrange(-total.fatalities)
+head(healthDataset_fatal, n=5)
+summary(healthDataset_fatal)
+# getting injuries data
+healthDataset_injury <- dataset %>% select(EVTYPE, INJURIES) %>% group_by(EVTYPE) %>% summarise(total.injuries = sum(INJURIES)) %>% arrange(-total.injuries)
+head(healthDataset_injury, n=5)
+summary(healthDataset_injury)
+```
+**2. Economy data**  
+Economic data is provided in the column **PROPDMG** and **CROPDMG** and it is translated in value of USD ($) by **PROPDMGEXP** and **CROPDMGEXP** parameters. The index in the PROPDMGEXP and CROPDMGEXP can be interpreted as the following
+H, h -> hundreds = x100  
+K, K -> kilos = x1,000  
+M, m -> millions = x1,000,000  
+B,b -> billions = x1,000,000,000  
+(+) -> x1  
+(-) -> x0  
+(?) -> x0  
+blank -> x0  
+**Note**: *as described via the following [link](https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html)*  
+```{r, warning=FALSE, message=FALSE}
+economicDataset <- dataset %>% select(EVTYPE, PROPDMG,PROPDMGEXP,CROPDMG,CROPDMGEXP)
+
+Symbol <- sort(unique(as.character(economicDataset$PROPDMGEXP)))
+Multiplier <- c(0,0,0,1,10,10,10,10,10,10,10,10,10,10^9,10^2,10^2,10^3,10^6,10^6)
+convert.Multiplier <- data.frame(Symbol, Multiplier)
+
+economicDataset$Prop.Multiplier <- convert.Multiplier$Multiplier[match(economicDataset$PROPDMGEXP, convert.Multiplier$Symbol)]
+economicDataset$Crop.Multiplier <- convert.Multiplier$Multiplier[match(economicDataset$CROPDMGEXP, convert.Multiplier$Symbol)]
+
+economicDataset <- economicDataset %>% mutate(PROPDMG = PROPDMG*Prop.Multiplier) %>% mutate(CROPDMG = CROPDMG*Crop.Multiplier) %>% mutate(TOTAL.DMG = PROPDMG+CROPDMG)
+
+economicDataset.total <- economicDataset %>% group_by(EVTYPE) %>% summarize(TOTAL.DMG.EVTYPE = sum(TOTAL.DMG))%>% arrange(-TOTAL.DMG.EVTYPE) 
+
+head(economicDataset.total,n=5)
+summary(economicDataset.total)
+```
+
+## Result  
+The following is the plot of the data processed above and result of the analysis  
+### Health Impact Analysis
+#### Fatalities Impact  
+The following is the plot for fatalities data by Event type.  
+```{r,warning=FALSE, message=FALSE}
+fatal <- ggplot(healthDataset_fatal[1:10,], aes(x=reorder(EVTYPE, -total.fatalities), y=total.fatalities), fill = interaction(total.fatalities, EVTYPE))+geom_bar(stat="identity") + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1))+ggtitle("Top 10 Events Causing Fatalities") +labs(x="EVENT TYPE", y="Total Fatalities")+scale_fill_brewer(palette="Oranges")
+fatal
+```  
+
+**Result**: From the bar chart plotted above, it is shown that **tornado** contributes to the highest fatality followed by **excessive heat** and **flash flood**. The gap between tornado and the other weather events is huge, of which a clear indication that tornado is extremely dangerous compared to other.  
+
+#### Injuries Impact  
+The following is the plot for injuries data by Event type.  
+```{r,warning=FALSE, message=FALSE}
+injury <- ggplot(healthDataset_injury[1:10,], aes(x=reorder(EVTYPE, -total.injuries), y=total.injuries), fill = interaction(total.injuries, EVTYPE))+geom_bar(stat="identity") + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1))+ggtitle("Top 10 Events Causing Injuries") +labs(x="EVENT TYPE", y="Total Injuries")+scale_fill_brewer(palette="Blues")
+injury
+```  
+
+**Result**: In terms of injuries, from the bar chart plotted above, it is shown that **tornado** is still the highest contributor for the injuries due to weather events followed by  **tstm wind** and **flood**. Similar to fatalities, tornado is also causing the most injuries to US citizen.  
+
+**Conclusion for Health Impact**
+```{r,warning=FALSE, message=FALSE}
+title <- textGrob('Top 10 Weather Events Causing Fatalities & Injuries', gp = gpar(fontsize = 15, font = 8))
+grid.arrange(fatal, injury, nrow = 1, newpage = F,top = title)
+```  
+As shown in the plot above, there is no doubt that *tornado* has the highest impact to health based on the data analyse.
+
+### Economic Impact Analysis
+The following bar plot shows the economic impact due to the weather events.
+```{r,warning=FALSE, message=FALSE}
+ggplot(economicDataset.total[1:10,], aes(x=reorder(EVTYPE, -TOTAL.DMG.EVTYPE), y=TOTAL.DMG.EVTYPE),fill = interaction(TOTAL.DMG.EVTYPE, EVTYPE))+geom_bar(stat="identity") + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1))+ggtitle("Top 10 Weather Events Causing Economic Impact") +labs(x="EVENT TYPE", y="Total Economic Impact ($USD)")
+```  
+**Conclusion for Economic Impact**
+Economic impact on the other end, is mostly affected due to flood as compared to health impact.
+
+## Conclusion  
+From the analysis shown, it is concluded that event related to wind, mainly tornado is causing fatal and injuries to US citizen, whereas flood has the biggest impact to economy.
